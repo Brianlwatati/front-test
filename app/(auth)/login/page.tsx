@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { loginUser, type LoginPayload, type LoginResponse } from "@/lib/auth";
 
-type LoginFormValues = {
-  email: string;
-  password: string;
-};
+type LoginFormValues = LoginPayload;
 
 export default function LoginPage() {
-  const [submittedData, setSubmittedData] = useState<LoginFormValues | null>(null);
+  const router = useRouter();
+  const [loginResult, setLoginResult] = useState<LoginResponse | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const {
     register,
@@ -22,8 +23,23 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    setSubmittedData(data);
+  const onSubmit = async (data: LoginFormValues) => {
+    setLoginError(null);
+    setLoginResult(null);
+
+    try {
+      const result = await loginUser(data);
+      setLoginResult(result);
+
+      if (result.success) {
+        if (result.accessToken) {
+          localStorage.setItem("accessToken", result.accessToken);
+        }
+        router.push("/dashboard");
+      }
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   return (
@@ -79,11 +95,18 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {submittedData ? (
+        {loginError ? (
+          <div className="mt-6 rounded-3xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
+            <p className="text-sm font-medium text-rose-900">Login failed</p>
+            <p className="mt-2 text-sm">{loginError}</p>
+          </div>
+        ) : null}
+
+        {loginResult ? (
           <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-slate-700">
-            <p className="text-sm font-medium text-slate-900">Submitted data</p>
+            <p className="text-sm font-medium text-slate-900">Login response</p>
             <pre className="mt-3 overflow-x-auto text-xs text-slate-600">
-              {JSON.stringify(submittedData, null, 2)}
+              {JSON.stringify(loginResult, null, 2)}
             </pre>
           </div>
         ) : null}
