@@ -88,15 +88,15 @@ export default function MatchesPage() {
             </div>
           </form>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1fr] items-start">
-            <div className=" overflow-hidden rounded-3xl border border-slate-200 bg-slate-950/95 p-6 text-slate-100 shadow-[0_15px_30px_rgba(15,23,42,0.08)]">
+          <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start">
+            <div className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-slate-950/95 p-6 text-slate-100 shadow-[0_15px_30px_rgba(15,23,42,0.08)]">
               <p className="text-sm uppercase tracking-[0.35em] text-slate-400">Raw request</p>
               <pre className="mt-4 max-h-[360px] overflow-auto whitespace-pre-wrap break-words text-sm text-slate-100">
                 {jsonText}
               </pre>
             </div>
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_15px_30px_rgba(15,23,42,0.08)]">
+            <div className="min-w-0 rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_15px_30px_rgba(15,23,42,0.08)]">
               <div className="flex items-center justify-between gap-4">
                 <p className="text-sm uppercase tracking-[0.35em] text-slate-500">Backend response</p>
                 {error ? <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">Error</span> : null}
