@@ -2,9 +2,34 @@
 
 import { FormEvent, useState } from "react";
 
+type Match = {
+  match: number;
+  matchId: number;
+  fixture: string;
+  homeTeam: string;
+  awayTeam: string;
+  odds: {
+    home: number;
+    draw: number;
+    away: number;
+  };
+  predictions: {
+    prediction1: string;
+    prediction2: string;
+    prediction3: string;
+    prediction4: string;
+  };
+};
+
+type ApiResponse = {
+  totalFixtures: number;
+  matchday: number;
+  teams: Match[];
+};
+
 export default function MatchesPage() {
   const [jsonText, setJsonText] = useState<string>("[]");
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -16,12 +41,13 @@ export default function MatchesPage() {
     let parsedData;
     try {
       parsedData = JSON.parse(jsonText);
-    } catch (parseError) {
+    } catch {
       setError("Invalid JSON. Please fix formatting and try again.");
       return;
     }
 
     setIsLoading(true);
+
     try {
       const response = await fetch("http://localhost:5000/api/matches/", {
         method: "POST",
@@ -31,13 +57,13 @@ export default function MatchesPage() {
         body: JSON.stringify({ data: parsedData }),
       });
 
-      const payload = await response.json().catch(() => null);
+      const payload = await response.json();
+
       if (!response.ok) {
-        const serverMessage = payload && typeof payload === "object" && "message" in payload ? String((payload as any).message) : response.statusText;
-        throw new Error(serverMessage || "Failed to process JSON data.");
+        throw new Error(payload?.message || "Failed to process JSON data.");
       }
 
-      setResult(JSON.stringify(payload, null, 2));
+      setResult(payload);
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : String(fetchError));
     } finally {
@@ -48,71 +74,95 @@ export default function MatchesPage() {
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <section className="rounded-[2rem] bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-slate-500">Matches processor</p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900">Paste JSON and send it to the backend</h1>
-            </div>
-            <p className="max-w-xl text-sm text-slate-600">
-              Enter JSON data below, then submit it for backend processing. The result will appear in the output panel.
-            </p>
-          </div>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-            <div className="flex flex-col w-full max-w-full overflow-hidden">
-              <label htmlFor="json-input" className="mb-2 block text-sm font-medium text-slate-700">
-                JSON input
-              </label>
-              <textarea
-                id="json-input"
-                value={jsonText}
-                onChange={(event) => setJsonText(event.target.value)}
-                rows={16}
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-                placeholder="Paste your JSON data here..."
-              />
-            </div>
+        {/* HEADER */}
+        <section className="rounded-[2rem] bg-white p-8 shadow">
+          <h1 className="text-2xl font-semibold">Matches Processor</h1>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="inline-flex items-center justify-center rounded-3xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-              >
-                {isLoading ? "Processing…" : "Send to backend"}
-              </button>
-              <p className="text-sm text-slate-500">
-                Tip: make sure the JSON is valid before submitting.
-              </p>
-            </div>
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <textarea
+              value={jsonText}
+              onChange={(e) => setJsonText(e.target.value)}
+              rows={10}
+              className="w-full rounded-xl border p-3 text-sm"
+            />
+
+            <button
+              disabled={isLoading}
+              className="rounded-xl bg-blue-600 px-5 py-2 text-white"
+            >
+              {isLoading ? "Processing..." : "Submit"}
+            </button>
           </form>
-
-          <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start">
-            <div className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-slate-950/95 p-6 text-slate-100 shadow-[0_15px_30px_rgba(15,23,42,0.08)]">
-              <p className="text-sm uppercase tracking-[0.35em] text-slate-400">Raw request</p>
-              <pre className="mt-4 max-h-[360px] overflow-auto whitespace-pre-wrap break-words text-sm text-slate-100">
-                {jsonText}
-              </pre>
-            </div>
-
-            <div className="min-w-0 rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_15px_30px_rgba(15,23,42,0.08)]">
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-sm uppercase tracking-[0.35em] text-slate-500">Backend response</p>
-                {error ? <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">Error</span> : null}
-              </div>
-              <div className="mt-4 min-h-[220px] overflow-auto rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-900">
-                {error ? (
-                  <pre className="whitespace-pre-wrap text-rose-700">{error}</pre>
-                ) : result ? (
-                  <pre className="whitespace-pre-wrap">{result}</pre>
-                ) : (
-                  <p className="text-sm text-slate-500">No result yet. Submit JSON to see backend output.</p>
-                )}
-              </div>
-            </div>
-          </div>
         </section>
+
+        {/* SUMMARY */}
+        {result && (
+          <section className="rounded-2xl bg-white p-6 shadow">
+            <h2 className="text-xl font-semibold">
+              Matchday {result.matchday}
+            </h2>
+            <p className="text-sm text-slate-500">
+              Total Fixtures: {result.totalFixtures}
+            </p>
+          </section>
+        )}
+
+        {/* MATCH LIST */}
+        {result && (
+          <section className="grid gap-4 md:grid-cols-2">
+            {result.teams.map((match) => (
+              <div
+                key={match.matchId}
+                className="rounded-2xl border bg-white p-5 shadow-sm"
+              >
+                <h3 className="font-semibold text-lg">
+                  {match.homeTeam} vs {match.awayTeam}
+                </h3>
+
+                <p className="text-xs text-slate-500">
+                  Match ID: {match.matchId}
+                </p>
+
+                {/* ODDS */}
+                <div className="mt-3">
+                  <p className="text-sm font-medium">Odds</p>
+                  <div className="flex gap-3 text-sm text-slate-600">
+                    <span>H: {match.odds.home}</span>
+                    <span>D: {match.odds.draw}</span>
+                    <span>A: {match.odds.away}</span>
+                  </div>
+                </div>
+
+                {/* PREDICTIONS */}
+                <div className="mt-3">
+                  <p className="text-sm font-medium">Predictions</p>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="rounded bg-slate-100 px-2 py-1">
+                      {match.predictions.prediction1}
+                    </span>
+                    <span className="rounded bg-slate-100 px-2 py-1">
+                      {match.predictions.prediction2}
+                    </span>
+                    <span className="rounded bg-slate-100 px-2 py-1">
+                      {match.predictions.prediction3}
+                    </span>
+                    <span className="rounded bg-slate-100 px-2 py-1">
+                      {match.predictions.prediction4}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* ERROR */}
+        {error && (
+          <div className="rounded-xl bg-red-50 p-4 text-red-600">
+            {error}
+          </div>
+        )}
       </div>
     </main>
   );
